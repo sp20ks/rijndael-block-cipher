@@ -44,18 +44,20 @@ namespace aes
     };
 
     std::string Encrypt( std::string text, std::string key );
+ 
+    std::vector< std::vector< int > > StringToBlock( std::string input );
 
-    std::vector<std::vector<int>> StringToBlock( std::string input );
+    std::vector< int > Xor( std::vector< int > array1, std::vector< int > array2 );
 
-    std::vector<int> Xor( std::vector<int> array1, std::vector<int> array2 );
-
-    std::vector<int> SubWord( std::vector<int> array1 );
+    std::vector< int > SubBytes( std::vector< int > array1 );
         
-    std::vector<int> RotWord( std::vector<int> array1 );
+    std::vector< int > RotWord( std::vector< int > array, int shift );
 
     int GetSboxValue( int num );
 
-    std::vector<std::vector<int>> KeyExpansion( std::vector<std::vector<int>> key );
+    std::vector< std::vector< int > > KeyExpansion( std::vector< std::vector< int > > key );
 
-    void printHexBlock(const std::vector<int>& block);
-}
+    std::vector< std::vector< int > > Transpose( std::vector< std::vector< int > > matrix );
+
+    std::vector< std::vector< int > > ShiftRows( std::vector< std::vector< int > > matrix );
+};

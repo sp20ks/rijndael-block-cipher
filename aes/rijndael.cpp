@@ -14,9 +14,9 @@
 //     // return key;
 // };
 
-std::vector<std::vector<int>> aes::StringToBlock( std::string input )
+std::vector< std::vector< int > > aes::StringToBlock( std::string input )
 {
-    std::vector<std::vector<int>> result;
+    std::vector< std::vector< int > > result;
     const size_t block_size = 4;
     size_t total_bytes = input.size();
     size_t extra_bytes = total_bytes % block_size;
@@ -40,7 +40,7 @@ std::vector<std::vector<int>> aes::StringToBlock( std::string input )
     return result;
 };
 
-std::vector<int> aes::Xor( std::vector<int> array1, std::vector<int> array2 )
+std::vector< int > aes::Xor( std::vector< int > array1, std::vector<int> array2 )
 {
     std::vector<int> result;
 
@@ -64,9 +64,9 @@ int aes::GetSboxValue( int num )
     return sbox[row][col];
 };
 
-std::vector<int> aes::SubWord( std::vector<int> array1 )
+std::vector< int > aes::SubBytes( std::vector< int > array1 )
 {
-    std::vector<int> result;
+    std::vector< int > result;
     for ( int i = 0; i < array1.size(); ++i )
     {
         result.push_back( GetSboxValue( array1[i] ) );
@@ -74,31 +74,31 @@ std::vector<int> aes::SubWord( std::vector<int> array1 )
     return result;
 };
 
-std::vector<int> aes::RotWord( std::vector<int> array )
+std::vector< int > aes::RotWord( std::vector< int > array, int shift )
 {
     std::vector<int> result = array;
-    std::rotate( result.begin(), result.begin() + 1, result.end() );
+    std::rotate( result.begin(), result.begin() + shift, result.end() );
     return result;
 };
 
-std::vector<std::vector<int>> aes::KeyExpansion( std::vector<std::vector<int>> key )
+std::vector< std::vector< int > > aes::KeyExpansion( std::vector< std::vector< int > > key )
 {
-    std::vector<std::vector<int>> result;
+    std::vector< std::vector< int > > result;
     for ( int i = 0; i < nk; ++i )
     {
         result.push_back( key[i] );
     };
 
-    std::vector<int> buf; 
+    std::vector< int > buf; 
     for ( int i = nk; i < nb * ( nr + 1 ); ++i )
     {   
         buf = result[i - 1];
         if ( i % nk == 0)
         {   
-            buf = RotWord( buf );
-            buf = SubWord( buf );
+            buf = RotWord( buf, 1 );
+            buf = SubBytes( buf );
             buf = Xor( result[i - nk], buf );
-            std::vector<int> rcon_vec( rcon[i / nk], rcon[i / nk] + 4 );
+            std::vector< int > rcon_vec( rcon[i / nk], rcon[i / nk] + 4 );
             result.push_back( Xor( buf, rcon_vec ) );
         } else
         {
@@ -109,4 +109,35 @@ std::vector<std::vector<int>> aes::KeyExpansion( std::vector<std::vector<int>> k
 
     return result;
 };
+
+std::vector< std::vector< int > > aes::Transpose( std::vector< std::vector< int > > matrix )
+{
+    int rows = matrix.size();
+    int cols = matrix[0].size();
+
+    std::vector< std::vector< int > > transposed( cols, std::vector<int>( rows, 0 ) );
+
+    for ( int i = 0; i < rows; ++i )
+    {
+        for ( int j = 0; j < cols; ++j )
+        {
+            transposed[j][i] = matrix[i][j];
+        };
+    };
+
+    return transposed;
+};
+
+std::vector< std::vector< int > > aes::ShiftRows( std::vector< std::vector< int > > matrix )
+{
+    std::vector< std::vector< int > > result = Transpose( matrix );
+
+    for ( int i = 0; i < 4; ++i )
+    {
+        result[i] = RotWord( result[i], i );
+    };
+
+    return Transpose( result );
+};
+
 
