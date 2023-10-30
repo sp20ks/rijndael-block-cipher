@@ -60,4 +60,11 @@ namespace aes
     std::vector< std::vector< int > > Transpose( std::vector< std::vector< int > > matrix );
 
     std::vector< std::vector< int > > ShiftRows( std::vector< std::vector< int > > matrix );
+
+    void AddRoundKey(std::vector< std::vector< int > > & state, const std::vector< std::vector< int > > & round_keys, int round = 0);
+
+    std::vector< std::vector< int > >  MixColumns( std::vector< std::vector< int > > & state );
+
+    int GaloisMul( int a, int b );
+
 };

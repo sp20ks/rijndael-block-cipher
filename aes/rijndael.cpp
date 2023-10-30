@@ -2,17 +2,19 @@
 #include <vector>
 #include <array>
 #include <algorithm>
+#include <iostream>
 
 #include "rijndael.hpp"
 
-// std::string aes::Encrypt( std::string text, std::string key )
-// {
-//     std::vector<std::vector<int>> state = StringToBlock( text );
+std::string aes::Encrypt( std::string text, std::string key )
+{
+    std::vector<std::vector<int>> state = StringToBlock( text );
 
-//     std::vector<std::vector<int>> keys = KeyExpansion( StringToBlock( key ) );
-
-//     // return key;
-// };
+    std::vector<std::vector<int>> keys = KeyExpansion( StringToBlock( key ) );
+    
+    std::string a;
+    return a;
+};
 
 std::vector< std::vector< int > > aes::StringToBlock( std::string input )
 {
@@ -140,4 +142,45 @@ std::vector< std::vector< int > > aes::ShiftRows( std::vector< std::vector< int 
     return Transpose( result );
 };
 
+void aes::AddRoundKey(std::vector< std::vector< int > > & state, const std::vector< std::vector< int > > & round_keys, int round )
+{
+    for ( size_t i = 0; i < state.size(); ++i )
+    {
+        for ( size_t j = 0; j < state[i].size(); ++j )
+        {
+            state[i][j] ^= round_keys[round * nb + i][j];
+        };
+    };
+};
 
+int aes::GaloisMul( int a, int b )
+{
+    if ( b == 1 )
+    {
+        return a;
+    }
+    int tmp = ( a << 1 ) & 0xff;
+    if ( b == 2 )
+    {
+        return ( a < 128 ) ? tmp : tmp ^ 0x1b;
+    }
+    if ( b == 3 )
+    {
+        return GaloisMul( a, 2 ) ^ a;
+    }
+    return 0;
+};
+
+std::vector< std::vector< int > >  aes::MixColumns( std::vector< std::vector< int > > & state )
+{
+    std::vector< std::vector< int > > tmp( state.size(), std::vector< int >( state[0].size(), 0 ) );
+   for ( size_t c = 0; c < state.size(); ++c )
+    {
+        tmp[c][0] = GaloisMul( state[c][0], 2 ) ^ GaloisMul( state[c][1], 3 ) ^ GaloisMul( state[c][2], 1 ) ^ GaloisMul( state[c][3], 1 );
+        tmp[c][1] = GaloisMul( state[c][0], 1 ) ^ GaloisMul( state[c][1], 2 ) ^ GaloisMul( state[c][2], 3 ) ^ GaloisMul( state[c][3], 1 );
+        tmp[c][2] = GaloisMul( state[c][0], 1 ) ^ GaloisMul( state[c][1], 1 ) ^ GaloisMul( state[c][2], 2 ) ^ GaloisMul( state[c][3], 3 );
+        tmp[c][3] = GaloisMul( state[c][0], 3 ) ^ GaloisMul( state[c][1], 1 ) ^ GaloisMul( state[c][2], 1 ) ^ GaloisMul( state[c][3], 2 );
+    }
+
+    return tmp;
+}
