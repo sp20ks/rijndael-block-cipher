@@ -4,8 +4,8 @@
 
 namespace aes
 {
-    const int nb = 4; // number of columns in State (for AES = 4) TODO: сделать вычисляемым (переехать в класс походу)
-    const int nr = 10; // number of rounds in cipher cycle (if nb = 4, nr = 10) TODO: сделать функцию, вычисляющую количество раундов для блоков разной длины
+    const int nb = 4; // number of columns in State (for AES = 4)
+    const int nr = 10; // number of rounds in cipher cycle 
     const int nk = 4; // the key length (in 32-bit words)
 
     const int sbox[16][16] =
@@ -63,8 +63,10 @@ namespace aes
 
     void AddRoundKey(std::vector< std::vector< int > > & state, const std::vector< std::vector< int > > & round_keys, int round = 0);
 
-    std::vector< std::vector< int > >  MixColumns( std::vector< std::vector< int > > & state );
+    std::vector< std::vector< int > >  MixColumns( std::vector< std::vector< int > > state );
 
     int GaloisMul( int a, int b );
+
+    std::string BlockToString( const std::vector< std::vector< int > > & block );
 
 };
