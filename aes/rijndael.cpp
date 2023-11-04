@@ -1,25 +1,8 @@
 #include <string>
 #include <vector>
-#include <array>
 #include <algorithm>
 #include <iostream>
-
-
-#include <iomanip>
-
-
-
 #include "rijndael.hpp"
-
-//TODO
-void printHexMatrix(const std::vector<std::vector<int>>& matrix) {
-    for (const auto& row : matrix) {
-        for (int num : row) {
-            std::cout << std::hex << std::setw(2) << std::setfill('0') << num << " ";
-        }
-        std::cout << std::endl;
-    }
-}
 
 std::string aes::Encrypt( std::string text, std::string key )
 {
@@ -44,12 +27,36 @@ std::string aes::Encrypt( std::string text, std::string key )
         state[i] = SubBytes( state[i] );
     };
     state = ShiftRows( state );
-    AddRoundKey(state, keys, nr);
+    AddRoundKey( state, keys, nr );
+    return BlockToString( state );
+};
 
-    // Convert state to string
-    std::string encrypted = BlockToString( state );
+std::string aes::Decrypt( std::string text, std::string key )
+{
+    std::vector< std::vector< int > > state = StringToBlock( text );
+    std::vector< std::vector< int > > keys = KeyExpansion( StringToBlock( key ) );
 
-    return encrypted;
+    // Initial Round (without MixColumns)
+    AddRoundKey( state, keys, nr );
+    state = ShiftRows( state, true );
+    for ( size_t i = 0; i < state.size(); ++i )
+    {
+        state[i] = SubBytes( state[i], true );
+    };
+    // Main Rounds
+    for ( int round = nr - 1; round > 0; --round )
+    {
+        AddRoundKey( state, keys, round) ;
+        state = MixColumns( state, true );
+        state = ShiftRows( state, true );
+        for ( size_t i = 0; i < state.size(); ++i )
+        {
+            state[i] = SubBytes( state[i], true );
+        }
+    }
+
+    AddRoundKey( state, keys, 0 );
+    return BlockToString( state );
 };
 
 std::vector< std::vector< int > > aes::StringToBlock( std::string input )
@@ -93,20 +100,20 @@ std::vector< int > aes::Xor( std::vector< int > array1, std::vector< int > array
     return result;
 };
 
-int aes::GetSboxValue( int num )
+int aes::GetSboxValue( int num, bool inv )
 {
     int row = num / 0x10; // Most significant nibble
     int col = num % 0x10; // Least significant nibble
 
-    return sbox[row][col];
+    return inv? InvSBox[row][col] : SBox[row][col];
 };
 
-std::vector< int > aes::SubBytes( std::vector< int > array1 )
+std::vector< int > aes::SubBytes( std::vector< int > array1, bool inv )
 {
     std::vector< int > result;
     for ( size_t i = 0; i < array1.size(); ++i )
     {
-        result.push_back( GetSboxValue( array1[i] ) );
+        result.push_back( GetSboxValue( array1[i], inv ) );
     };
     return result;
 };
@@ -135,8 +142,8 @@ std::vector< std::vector< int > > aes::KeyExpansion( std::vector< std::vector< i
             buf = RotWord( buf, 1 );
             buf = SubBytes( buf );
             buf = Xor( result[i - nk], buf );
-            std::vector< int > rcon_vec( rcon[i / nk], rcon[i / nk] + 4 );
-            result.push_back( Xor( buf, rcon_vec ) );
+            std::vector< int > RCon_vec( RCon[i / nk], RCon[i / nk] + 4 );
+            result.push_back( Xor( buf, RCon_vec ) );
         } else
         {
             buf = Xor( result[i - nk], buf );
@@ -165,13 +172,22 @@ std::vector< std::vector< int > > aes::Transpose( std::vector< std::vector< int 
     return transposed;
 };
 
-std::vector< std::vector< int > > aes::ShiftRows( std::vector< std::vector< int > > matrix )
+std::vector< std::vector< int > > aes::ShiftRows( std::vector< std::vector< int > > matrix, bool inv)
 {
     std::vector< std::vector< int > > result = Transpose( matrix );
 
-    for ( size_t i = 0; i < 4; ++i )
+    if ( inv )
     {
-        result[i] = RotWord( result[i], i );
+        for ( size_t i = 0; i < 4; ++i )
+        {
+            result[i] = RotWord( result[i], result[i].size() - i );
+        };
+    } else
+    {
+        for ( size_t i = 0; i < 4; ++i )
+        {
+            result[i] = RotWord( result[i], i );
+        };
     };
 
     return Transpose( result );
@@ -194,28 +210,76 @@ int aes::GaloisMul( int a, int b )
     {
         return a;
     }
-    int tmp = ( a << 1 ) & 0xff;
     if ( b == 2 )
     {
+        int tmp = ( a << 1 ) & 0xff;
         return ( a < 128 ) ? tmp : tmp ^ 0x1b;
     }
     if ( b == 3 )
     {
         return GaloisMul( a, 2 ) ^ a;
     }
+    if ( b == 9 )
+    {
+        return GaloisMul( GaloisMul( GaloisMul( a, 2 ), 2 ), 2 ) ^ a;
+    }
+    if ( b == 11 )
+    {
+        return GaloisMul( GaloisMul( GaloisMul( a, 2 ), 2 ), 2 ) ^ GaloisMul( a, 2 ) ^ a;
+    }
+    if ( b == 14 )
+    {
+        return GaloisMul( GaloisMul( GaloisMul( a, 2 ), 2 ), 2 ) ^ GaloisMul( GaloisMul( a, 2 ), 2 ) ^ a;
+    }
+    if ( b == 15 )
+    {
+       return GaloisMul( GaloisMul( GaloisMul( a, 2 ), 2 ), 2 ) ^ GaloisMul( GaloisMul( a, 2 ), 2 ) ^ GaloisMul( a, 2 );
+    }
     return 0;
+
+    // if ( a * b == 0 )
+    // {
+    //     return 0;
+    // };
+
+    // int result = 0;
+    // while ( b > 0 )
+    // {
+    //     if ( b & 1 )
+    //     {
+    //         result ^= a;
+    //     };
+
+    //     a = ( a << 1 ) ^ ( ( a & 0x80 ) ? 0x1b : 0 );
+    //     b >>= 1;
+    // };
+
+    // return result;
+
 };
 
-std::vector< std::vector< int > >  aes::MixColumns( std::vector< std::vector< int > > state )
+std::vector< std::vector< int > >  aes::MixColumns( std::vector< std::vector< int > > state, bool inv )
 {
     std::vector< std::vector< int > > tmp( state.size(), std::vector< int >( state[0].size(), 0 ) );
-   for ( size_t c = 0; c < state.size(); ++c )
+    if ( inv )
     {
-        tmp[c][0] = GaloisMul( state[c][0], 2 ) ^ GaloisMul( state[c][1], 3 ) ^ GaloisMul( state[c][2], 1 ) ^ GaloisMul( state[c][3], 1 );
-        tmp[c][1] = GaloisMul( state[c][0], 1 ) ^ GaloisMul( state[c][1], 2 ) ^ GaloisMul( state[c][2], 3 ) ^ GaloisMul( state[c][3], 1 );
-        tmp[c][2] = GaloisMul( state[c][0], 1 ) ^ GaloisMul( state[c][1], 1 ) ^ GaloisMul( state[c][2], 2 ) ^ GaloisMul( state[c][3], 3 );
-        tmp[c][3] = GaloisMul( state[c][0], 3 ) ^ GaloisMul( state[c][1], 1 ) ^ GaloisMul( state[c][2], 1 ) ^ GaloisMul( state[c][3], 2 );
-    }
+        for ( size_t c = 0; c < state.size(); ++c )
+        {
+            tmp[c][0] = ( GaloisMul( state[c][0], 15 ) ^ GaloisMul( state[c][1], 11 ) ^ GaloisMul( state[c][2], 14 ) ^ GaloisMul( state[c][3], 9 ) );
+            tmp[c][1] = ( GaloisMul( state[c][0], 9 ) ^ GaloisMul( state[c][1], 15 ) ^ GaloisMul( state[c][2], 11 ) ^ GaloisMul( state[c][3], 14 ) );
+            tmp[c][2] = ( GaloisMul( state[c][0], 14 ) ^ GaloisMul( state[c][1], 9 ) ^ GaloisMul( state[c][2], 15 ) ^ GaloisMul( state[c][3], 11 ) );
+            tmp[c][3] = ( GaloisMul( state[c][0], 11 ) ^ GaloisMul( state[c][1], 14 ) ^ GaloisMul( state[c][2], 9 ) ^ GaloisMul( state[c][3], 15 ) );
+        }
+    } else
+    {
+        for ( size_t c = 0; c < state.size(); ++c )
+        {
+            tmp[c][0] = GaloisMul( state[c][0], 2 ) ^ GaloisMul( state[c][1], 3 ) ^ GaloisMul( state[c][2], 1 ) ^ GaloisMul( state[c][3], 1 );
+            tmp[c][1] = GaloisMul( state[c][0], 1 ) ^ GaloisMul( state[c][1], 2 ) ^ GaloisMul( state[c][2], 3 ) ^ GaloisMul( state[c][3], 1 );
+            tmp[c][2] = GaloisMul( state[c][0], 1 ) ^ GaloisMul( state[c][1], 1 ) ^ GaloisMul( state[c][2], 2 ) ^ GaloisMul( state[c][3], 3 );
+            tmp[c][3] = GaloisMul( state[c][0], 3 ) ^ GaloisMul( state[c][1], 1 ) ^ GaloisMul( state[c][2], 1 ) ^ GaloisMul( state[c][3], 2 );
+        };
+    };
 
     return tmp;
 };
