@@ -64,10 +64,10 @@ std::vector< std::vector< int > > aes::StringToBlock( std::string input )
     std::vector< std::vector< int > > result;
     size_t total_bytes = input.size();
 
-    if ( total_bytes < nb )
+    if ( total_bytes < nb * nb )
     {
-        input.append( nb - total_bytes, '\0' );
-        total_bytes = nb;
+        input.append( nb * nb - total_bytes, '\0' );
+        total_bytes = nb * nb;
     };
 
     for ( size_t i = 0; i < total_bytes; i += nb )
