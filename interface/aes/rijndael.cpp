@@ -1,10 +1,6 @@
-#include <string>
-#include <vector>
-#include <algorithm>
-#include <iostream>
 #include "rijndael.hpp"
 
-std::string aes::Encrypt( std::string text, std::string key )
+std::string AesCipher::Encrypt( std::string text, std::string key )
 {
     std::vector< std::vector< int > > state = StringToBlock( text );
     std::vector< std::vector< int > > keys = KeyExpansion( StringToBlock( key ) );
@@ -14,52 +10,62 @@ std::string aes::Encrypt( std::string text, std::string key )
     {
         for ( size_t i = 0; i < state.size(); ++i )
         {
-            state[i] = SubBytes( state[i] );
+            // state[i] = SubBytes( state[i] );
+            SubBytes( state[i] );
         };
-        state = ShiftRows( state );
-        state = MixColumns( state );
+        // state = ShiftRows( state );
+        ShiftRows( state );
+        // state = MixColumns( state );
+        MixColumns( state );
         AddRoundKey( state, keys, round );
-    }
+    };
 
     // Final Round (without MixColumns)
     for ( size_t i = 0; i < state.size(); ++i )
     {
-        state[i] = SubBytes( state[i] );
+        // state[i] = SubBytes( state[i] );
+        SubBytes( state[i] );
     };
-    state = ShiftRows( state );
+    // state = ShiftRows( state );
+    ShiftRows( state );
     AddRoundKey( state, keys, nr );
     return BlockToString( state );
 };
 
-std::string aes::Decrypt( std::string text, std::string key )
+std::string AesCipher::Decrypt( std::string text, std::string key )
 {
     std::vector< std::vector< int > > state = StringToBlock( text );
     std::vector< std::vector< int > > keys = KeyExpansion( StringToBlock( key ) );
 
     // Initial Round (without MixColumns)
     AddRoundKey( state, keys, nr );
-    state = ShiftRows( state, true );
+    // state = ShiftRows( state, true );
+    ShiftRows( state );
     for ( size_t i = 0; i < state.size(); ++i )
     {
-        state[i] = SubBytes( state[i], true );
+        // state[i] = SubBytes( state[i], true );
+        SubBytes( state[i], true );
     };
     // Main Rounds
     for ( int round = nr - 1; round > 0; --round )
     {
         AddRoundKey( state, keys, round) ;
-        state = MixColumns( state, true );
-        state = ShiftRows( state, true );
+        // state = MixColumns( state, true );
+        MixColumns( state, true );
+        // state = ShiftRows( state, true );
+        ShiftRows( state );
         for ( size_t i = 0; i < state.size(); ++i )
         {
-            state[i] = SubBytes( state[i], true );
-        }
-    }
+            // state[i] = SubBytes( state[i], true );
+            SubBytes( state[i], true );
+        };
+    };
 
     AddRoundKey( state, keys, 0 );
     return BlockToString( state );
 };
 
-std::vector< std::vector< int > > aes::StringToBlock( std::string input )
+std::vector< std::vector< int > > AesCipher::StringToBlock( std::string input )
 {
     std::vector< std::vector< int > > result;
     size_t total_bytes = input.size();
@@ -83,7 +89,7 @@ std::vector< std::vector< int > > aes::StringToBlock( std::string input )
     return result;
 }
 
-std::vector< int > aes::Xor( std::vector< int > array1, std::vector< int > array2 )
+std::vector< int > AesCipher::Xor( std::vector< int > array1, std::vector< int > array2 )
 {
     std::vector< int > result;
 
@@ -100,7 +106,7 @@ std::vector< int > aes::Xor( std::vector< int > array1, std::vector< int > array
     return result;
 };
 
-int aes::GetSboxValue( int num, bool inv )
+int AesCipher::GetSboxValue( int num, bool inv )
 {
     int row = num / 0x10; // Most significant nibble
     int col = num % 0x10; // Least significant nibble
@@ -108,24 +114,30 @@ int aes::GetSboxValue( int num, bool inv )
     return inv? InvSBox[row][col] : SBox[row][col];
 };
 
-std::vector< int > aes::SubBytes( std::vector< int > array1, bool inv )
+// std::vector< int > AesCipher::SubBytes( std::vector< int > array1, bool inv )
+
+void AesCipher::SubBytes( std::vector< int > array1, bool inv )
 {
-    std::vector< int > result;
+    // std::vector< int > result;
     for ( size_t i = 0; i < array1.size(); ++i )
     {
-        result.push_back( GetSboxValue( array1[i], inv ) );
+        // result.push_back( GetSboxValue( array1[i], inv ) );
+        array1[i] = GetSboxValue( array1[i], inv );
     };
-    return result;
+    // return result;
 };
 
-std::vector< int > aes::RotWord( std::vector< int > array, int shift )
+// std::vector< int > AesCipher::RotWord( std::vector< int > array, int shift )
+void AesCipher::RotWord( std::vector< int > array, int shift )
 {
-    std::vector<int> result = array;
-    std::rotate( result.begin(), result.begin() + shift, result.end() );
-    return result;
+    // std::vector<int> result = array;
+    // std::rotate( result.begin(), result.begin() + shift, result.end() );
+    std::rotate( array.begin(), array.begin() + shift, array.end() );
+    // return result;
+    // array = result;
 };
 
-std::vector< std::vector< int > > aes::KeyExpansion( std::vector< std::vector< int > > key )
+std::vector< std::vector< int > > AesCipher::KeyExpansion( std::vector< std::vector< int > > key )
 {
     std::vector< std::vector< int > > result;
     for ( size_t i = 0; i < nk; ++i )
@@ -133,14 +145,16 @@ std::vector< std::vector< int > > aes::KeyExpansion( std::vector< std::vector< i
         result.push_back( key[i] );
     };
 
-    std::vector< int > buf; 
+    std::vector< int > buf;
     for ( size_t i = nk; i < nb * ( nr + 1 ); ++i )
-    {   
+    {
         buf = result[i - 1];
         if ( i % nk == 0)
-        {   
-            buf = RotWord( buf, 1 );
-            buf = SubBytes( buf );
+        {
+            // buf = RotWord( buf, 1 );
+            RotWord( buf, 1 );
+            // buf = SubBytes( buf );
+            SubBytes( buf );
             buf = Xor( result[i - nk], buf );
             std::vector< int > RCon_vec( RCon[i / nk], RCon[i / nk] + 4 );
             result.push_back( Xor( buf, RCon_vec ) );
@@ -154,7 +168,7 @@ std::vector< std::vector< int > > aes::KeyExpansion( std::vector< std::vector< i
     return result;
 };
 
-std::vector< std::vector< int > > aes::Transpose( std::vector< std::vector< int > > matrix )
+std::vector< std::vector< int > > AesCipher::Transpose( std::vector< std::vector< int > > matrix )
 {
     int rows = matrix.size();
     int cols = matrix[0].size();
@@ -172,7 +186,8 @@ std::vector< std::vector< int > > aes::Transpose( std::vector< std::vector< int 
     return transposed;
 };
 
-std::vector< std::vector< int > > aes::ShiftRows( std::vector< std::vector< int > > matrix, bool inv)
+// std::vector< std::vector< int > > AesCipher::ShiftRows( std::vector< std::vector< int > > matrix, bool inv)
+void AesCipher::ShiftRows( std::vector< std::vector< int > > matrix, bool inv)
 {
     std::vector< std::vector< int > > result = Transpose( matrix );
 
@@ -180,20 +195,22 @@ std::vector< std::vector< int > > aes::ShiftRows( std::vector< std::vector< int 
     {
         for ( size_t i = 0; i < 4; ++i )
         {
-            result[i] = RotWord( result[i], result[i].size() - i );
+            // result[i] = RotWord( result[i], result[i].size() - i );
+            RotWord( result[i], result[i].size() - i );
         };
     } else
     {
         for ( size_t i = 0; i < 4; ++i )
         {
-            result[i] = RotWord( result[i], i );
+            // result[i] = RotWord( result[i], i );
+            RotWord( result[i], i );
         };
     };
-
-    return Transpose( result );
+    matrix = Transpose( result );
+    // return Transpose( result );
 };
 
-void aes::AddRoundKey(std::vector< std::vector< int > > & state, const std::vector< std::vector< int > > & round_keys, int round )
+void AesCipher::AddRoundKey(std::vector< std::vector< int > > & state, const std::vector< std::vector< int > > & round_keys, int round )
 {
     for ( size_t i = 0; i < state.size(); ++i )
     {
@@ -204,7 +221,7 @@ void aes::AddRoundKey(std::vector< std::vector< int > > & state, const std::vect
     };
 };
 
-int aes::GaloisMul( int a, int b )
+int AesCipher::GaloisMul( int a, int b )
 {
     if ( b == 1 )
     {
@@ -236,29 +253,10 @@ int aes::GaloisMul( int a, int b )
        return GaloisMul( GaloisMul( GaloisMul( a, 2 ), 2 ), 2 ) ^ GaloisMul( GaloisMul( a, 2 ), 2 ) ^ GaloisMul( a, 2 );
     }
     return 0;
-
-    // if ( a * b == 0 )
-    // {
-    //     return 0;
-    // };
-
-    // int result = 0;
-    // while ( b > 0 )
-    // {
-    //     if ( b & 1 )
-    //     {
-    //         result ^= a;
-    //     };
-
-    //     a = ( a << 1 ) ^ ( ( a & 0x80 ) ? 0x1b : 0 );
-    //     b >>= 1;
-    // };
-
-    // return result;
-
 };
 
-std::vector< std::vector< int > >  aes::MixColumns( std::vector< std::vector< int > > state, bool inv )
+// std::vector< std::vector< int > >  AesCipher::MixColumns( std::vector< std::vector< int > > state, bool inv )
+void AesCipher::MixColumns( std::vector< std::vector< int > > state, bool inv )
 {
     std::vector< std::vector< int > > tmp( state.size(), std::vector< int >( state[0].size(), 0 ) );
     if ( inv )
@@ -281,10 +279,11 @@ std::vector< std::vector< int > >  aes::MixColumns( std::vector< std::vector< in
         };
     };
 
-    return tmp;
+    state = tmp;
+    // return tmp;
 };
 
-std::string aes::BlockToString( const std::vector< std::vector< int > > & block )
+std::string AesCipher::BlockToString( const std::vector< std::vector< int > > & block )
 {
     std::string result;
     for ( const auto & row : block )

@@ -11,13 +11,13 @@ CONFIG += c++11
 INCLUDEPATH += /aes
 
 SOURCES += \
-    aescryptor.cpp \
+    file_cryptor.cpp \
     main.cpp \
     widget.cpp \
     aes/rijndael.cpp
 
 HEADERS += \
-    aescryptor.h \
+    file_cryptor.h \
     widget.h \
     aes/rijndael.hpp
 

@@ -1,14 +1,14 @@
 #include "widget.h"
 #include "ui_widget.h"
-#include "aescryptor.h"
+#include "file_cryptor.h"
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QDir>
-Widget::Widget(QWidget *parent)
-    : QWidget(parent)
-    , ui(new Ui::Widget)
+Widget::Widget( QWidget * parent )
+    : QWidget( parent )
+    , ui( new Ui::Widget )
 {
-    ui->setupUi(this);
+    ui->setupUi( this );
 }
 
 Widget::~Widget()
@@ -37,7 +37,8 @@ void Widget::on_pushButton_2_clicked()
         QMessageBox::critical( this, "Error", "Все поля должны быть заполнены." );
     } else
     {
-        QString path = AESCryptor( ui->lineEdit_2->text() ).Encrypt( ui->lineEdit->text() );
+        AesCipher aesCipher;
+        QString path = FileCryptor(ui->lineEdit_2->text(), aesCipher ).Encrypt( ui->lineEdit->text() );
         if ( path.isEmpty() )
         {
             QMessageBox::critical( this, "Error", "Ошибка шифрования." );
@@ -58,7 +59,8 @@ void Widget::on_pushButton_3_clicked()
         QMessageBox::critical( this, "Error", "Все поля должны быть заполнены." );
     } else
     {
-        QString path = AESCryptor( ui->lineEdit_2->text() ).Decrypt( ui->lineEdit->text() );
+        AesCipher aesCipher;
+        QString path = FileCryptor( ui->lineEdit_2->text(), aesCipher ).Decrypt( ui->lineEdit->text() );
         if ( path.isEmpty() )
         {
             QMessageBox::critical( this, "Error", "Ошибка дешифрования." );
