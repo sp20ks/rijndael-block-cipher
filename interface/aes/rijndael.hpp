@@ -23,10 +23,8 @@ class AesCipher : public ICryptographicAdapter
 
     std::vector< int > Xor( std::vector< int > array1, std::vector< int > array2 );
 
-    // std::vector< int > SubBytes( std::vector< int > array1, bool inv = false );
     void SubBytes( std::vector< int > array1, bool inv = false );
 
-    // std::vector< int > RotWord( std::vector< int > array, int shift );
     void RotWord( std::vector< int > array, int shift );
 
     int GetSboxValue( int num, bool inv = false );
